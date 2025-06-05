@@ -56,9 +56,9 @@ app.get('/api/persons/:id', (req, res, next) => {
     .catch(error => next(error));
 });
 
-// ✅ This deletes the person from the database
+// Updated delete route: use findByIdAndDelete instead of findByIdAndRemove
 app.delete('/api/persons/:id', (req, res, next) => {
-  Person.findByIdAndRemove(req.params.id)
+  Person.findByIdAndDelete(req.params.id)
     .then(() => res.status(204).end())
     .catch(error => next(error));
 });
