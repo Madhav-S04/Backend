@@ -56,13 +56,13 @@ app.get('/api/persons/:id', (req, res, next) => {
     .catch(error => next(error));
 });
 
+// ✅ This deletes the person from the database
 app.delete('/api/persons/:id', (req, res, next) => {
   Person.findByIdAndRemove(req.params.id)
     .then(() => res.status(204).end())
     .catch(error => next(error));
 });
 
-// ✅ Updated POST route (no duplicate name check)
 app.post('/api/persons', (req, res, next) => {
   const { name, number } = req.body;
 
