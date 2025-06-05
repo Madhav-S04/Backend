@@ -5,6 +5,7 @@ import path from 'path';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import Person from './models/person.js';
 
 dotenv.config();
 
@@ -21,92 +22,64 @@ app.use(
 );
 
 // MongoDB connection
-const url = process.env.MONGODB_URI;
-
 mongoose.set('strictQuery', false);
-mongoose.connect(url)
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB:', error.message);
-  });
-
-// Define Mongoose schema and model
-const personSchema = new mongoose.Schema({
-  name: String,
-  number: String,
-});
-
-const Person = mongoose.model('Person', personSchema);
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(error => console.error('Error connecting to MongoDB:', error.message));
 
 // Routes
 
-app.get('/api/persons', (req, res) => {
-  Person.find({}).then(persons => {
-    res.json(persons);
-  });
+app.get('/api/persons', (req, res, next) => {
+  Person.find({})
+    .then(persons => res.json(persons))
+    .catch(error => next(error));
 });
 
-app.get('/info', (req, res) => {
-  Person.countDocuments({}).then(count => {
-    const date = new Date();
-    res.send(`
-      <p>Phonebook has info for ${count} people</p>
-      <p>${date}</p>
-    `);
-  });
+app.get('/info', (req, res, next) => {
+  Person.countDocuments({})
+    .then(count => {
+      const date = new Date();
+      res.send(`
+        <p>Phonebook has info for ${count} people</p>
+        <p>${date}</p>
+      `);
+    })
+    .catch(error => next(error));
 });
 
 app.get('/api/persons/:id', (req, res, next) => {
   Person.findById(req.params.id)
     .then(person => {
-      if (person) {
-        res.json(person);
-      } else {
-        res.status(404).end();
-      }
+      if (person) res.json(person);
+      else res.status(404).end();
     })
     .catch(error => next(error));
 });
 
 app.delete('/api/persons/:id', (req, res, next) => {
   Person.findByIdAndRemove(req.params.id)
-    .then(() => {
-      res.status(204).end();
-    })
+    .then(() => res.status(204).end())
     .catch(error => next(error));
 });
 
+// ✅ Updated POST route (no duplicate name check)
 app.post('/api/persons', (req, res, next) => {
-  const body = req.body;
+  const { name, number } = req.body;
 
-  if (!body.name || !body.number) {
+  if (!name || !number) {
     return res.status(400).json({ error: 'name or number is missing' });
   }
 
-  Person.findOne({ name: body.name }).then(existingPerson => {
-    if (existingPerson) {
-      return res.status(400).json({ error: 'name must be unique' });
-    }
+  const person = new Person({ name, number });
 
-    const person = new Person({
-      name: body.name,
-      number: body.number,
-    });
-
-    person.save()
-      .then(savedPerson => {
-        res.json(savedPerson);
-      })
-      .catch(error => next(error));
-  });
+  person.save()
+    .then(saved => res.json(saved))
+    .catch(error => next(error));
 });
 
 // Serve frontend (dist folder)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 app.use(express.static(path.join(__dirname, 'dist')));
 
 app.get('*', (req, res) => {
